@@ -1,0 +1,7 @@
+Build_windows_32bit/
+Build_windows_32bit_release/
+Build_android_armv7/
+*.user
+*.o
+*.d
+*.autosave
