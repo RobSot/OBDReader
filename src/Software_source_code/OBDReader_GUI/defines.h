@@ -2,7 +2,16 @@
 #define DEFINES_H
 
 /* Macros genéricas */
-#define NUM_OF_PIDS 224
+#define NUM_OF_PIDS                 224
+#define ISNT_AV_PID_COMMAND(x)      ((x != 0x20) && (x != 0x40) && (x != 0x60) && (x != 0x80) && (x != 0xA0) && (x != 0xC0) && (x != 0xE0))
+#define ISNT_USELESS_PID(x)         ((x != 0x01) && (x != 0x02) && (x != 0x13) && (x != 0x1C) && (x != 0x41) && (x != 0x4F) && (x != 0x50) && (x != 0x51))
+#define IS_FUEL_SYSTEM_MODES(x)     ((x == 1) || (x == 2) || (x == 4) || (x == 8) || (x == 16))
+#define IS_OXIGEN_SYSTEM_MODES(x)     ((x == 1) || (x == 2) || (x == 4) || (x == 8))
+
+/* Macros de Error*/
+#define OBDREADER_NOT_RESPONDING1       1
+#define OBDREADER_NOT_RESPONDING2       2
+#define PID_ERROR                       3
 
 /*** Comandos puerto serie ***
 ******************************/

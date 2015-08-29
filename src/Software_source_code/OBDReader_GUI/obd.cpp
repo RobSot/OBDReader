@@ -148,17 +148,18 @@ void obd::parseOBD(QByteArray obd)
 {
     qDebug() << QString::number(obd.size()) << " : " << obd.toHex();
 
-    uchar num, mode, pid, A, B, C, D;
+    uchar pid, A, B;
+//    uchar num, mode, pid, A, B, C, D;
     QTime timeStamp = QTime::currentTime();
     QTextStream text(file);
     bool notPid = true;
-    num = obd.at(0) - 2;
-    mode = obd.at(1);
+//    num = obd.at(0) - 2;
+//    mode = obd.at(1);
     pid = obd.at(2);
     A = obd.at(3);
     B = obd.at(4);
-    C = obd.at(5);
-    D = obd.at(6);
+//    C = obd.at(5);
+//    D = obd.at(6);
     text << timeStamp.toString("hh:mm:ss.zzz:") << QString::number(pid,16) << ": ";
 
     if (pid == COOLANT_TEMP)
@@ -201,12 +202,13 @@ void obd::parseOBD_Vector(QByteArray obd)
     qDebug() << QString::number(obd.size()) << " : " << obd.toHex();
 
     static int count = 0; //Solo se inicializa la primera vez a 0 (static)
-    uchar num, mode, pid, A, B, C, D;
+    uchar pid, A, B, C, D;
+//    uchar num, mode, pid, A, B, C, D;
     QTime timeStamp = QTime::currentTime();
     QTextStream text(file);
     bool notPid = true;
-    num = obd.at(0) - 2;
-    mode = obd.at(1);
+//    num = obd.at(0) - 2;
+//    mode = obd.at(1);
     pid = obd.at(2);
     A = obd.at(3);
     B = obd.at(4);
@@ -214,9 +216,17 @@ void obd::parseOBD_Vector(QByteArray obd)
     D = obd.at(6);
     count++;
 
-    if (pid == ENGINE_LOAD)
+    if      (pid == FUEL_SYSTEM_STATUS)
     {
-        PidVector[ENGINE_LOAD] = (A * 100) / 255;
+        if (IS_FUEL_SYSTEM_MODES(A))
+        {
+            PidVector[FUEL_SYSTEM_STATUS] = A;
+            notPid = false;
+        }
+    }
+    else if (pid == ENGINE_LOAD)
+    {
+        PidVector[ENGINE_LOAD] = (double) (A * 100) / 255;
         notPid = false;
     }
     else if (pid == COOLANT_TEMP)
@@ -226,22 +236,22 @@ void obd::parseOBD_Vector(QByteArray obd)
     }
     else if (pid == SHORT_TERM_FUEL_BANK1)
     {
-        PidVector[SHORT_TERM_FUEL_BANK1] = ((A - 128) * 100) / 128;
+        PidVector[SHORT_TERM_FUEL_BANK1] = (double) ((A - 128) * 100) / 128;
         notPid = false;
     }
     else if (pid == LONG_TERM_FUEL_BANK1)
     {
-        PidVector[LONG_TERM_FUEL_BANK1] = ((A - 128) * 100) / 128;
+        PidVector[LONG_TERM_FUEL_BANK1] = (double) ((A - 128) * 100) / 128;
         notPid = false;
     }
     else if (pid == SHORT_TERM_FUEL_BANK2)
     {
-        PidVector[SHORT_TERM_FUEL_BANK2] = ((A - 128) * 100) / 128;
+        PidVector[SHORT_TERM_FUEL_BANK2] = (double) ((A - 128) * 100) / 128;
         notPid = false;
     }
     else if (pid == LONG_TERM_FUEL_BANK2)
     {
-        PidVector[LONG_TERM_FUEL_BANK2] = ((A - 128) * 100) / 128;
+        PidVector[LONG_TERM_FUEL_BANK2] = (double) ((A - 128) * 100) / 128;
         notPid = false;
     }
     else if (pid == FUEL_PRESSURE)
@@ -256,7 +266,7 @@ void obd::parseOBD_Vector(QByteArray obd)
     }
     else if (pid == ENGINE_RPM)
     {
-        PidVector[ENGINE_RPM] = ((A * 256) + B) / 4;
+        PidVector[ENGINE_RPM] = (double) ((A * 256) + B) / 4;
         notPid = false;
     }
     else if (pid == VEHICLE_SPEED)
@@ -266,7 +276,7 @@ void obd::parseOBD_Vector(QByteArray obd)
     }
     else if (pid == TIMING_ADVANCE)
     {
-        PidVector[TIMING_ADVANCE] = (A - 128) / 2;
+        PidVector[TIMING_ADVANCE] = (double) (A - 128) / 2;
         notPid = false;
     }
     else if (pid == INTAKE_AIR_TEMP)
@@ -276,7 +286,7 @@ void obd::parseOBD_Vector(QByteArray obd)
     }
     else if (pid == MAF)
     {
-        PidVector[MAF] = ((A * 256) + B) / 100;
+        PidVector[MAF] = (double) ((A * 256) + B) / 100;
         notPid = false;
     }
     else if (pid == THROTTLE_POSITION)
@@ -284,9 +294,52 @@ void obd::parseOBD_Vector(QByteArray obd)
         PidVector[THROTTLE_POSITION] = (A * 100) / 255;
         notPid = false;
     }
+    else if (pid == COMMANDED_SECONDARY_AIR_STATUS)
+    {
+        if (IS_OXIGEN_SYSTEM_MODES(A))
+        {
+            PidVector[COMMANDED_SECONDARY_AIR_STATUS] = A;
+            notPid = false;
+        }
+    }
     else if (pid == OXYGEN_BANK1_SENSOR1)
     {
-        PidVector[OXYGEN_BANK1_SENSOR1] = A / 200;
+        PidVector[OXYGEN_BANK1_SENSOR1] = (double) A / 200;
+        notPid = false;
+    }
+    else if (pid == OXYGEN_BANK1_SENSOR2)
+    {
+        PidVector[OXYGEN_BANK1_SENSOR2] = (double) A / 200;
+        notPid = false;
+    }
+    else if (pid == OXYGEN_BANK1_SENSOR3)
+    {
+        PidVector[OXYGEN_BANK1_SENSOR3] = (double) A / 200;
+        notPid = false;
+    }
+    else if (pid == OXYGEN_BANK1_SENSOR4)
+    {
+        PidVector[OXYGEN_BANK1_SENSOR4] = (double) A / 200;
+        notPid = false;
+    }
+    else if (pid == OXYGEN_BANK2_SENSOR1)
+    {
+        PidVector[OXYGEN_BANK2_SENSOR1] = (double) A / 200;
+        notPid = false;
+    }
+    else if (pid == OXYGEN_BANK2_SENSOR2)
+    {
+        PidVector[OXYGEN_BANK2_SENSOR2] = (double) A / 200;
+        notPid = false;
+    }
+    else if (pid == OXYGEN_BANK2_SENSOR3)
+    {
+        PidVector[OXYGEN_BANK2_SENSOR3] = (double) A / 200;
+        notPid = false;
+    }
+    else if (pid == OXYGEN_BANK2_SENSOR4)
+    {
+        PidVector[OXYGEN_BANK2_SENSOR4] = (double) A / 200;
         notPid = false;
     }
     else if (pid == RUN_TIME_SINCE_ENGINE_START)
@@ -301,12 +354,108 @@ void obd::parseOBD_Vector(QByteArray obd)
     }
     else if (pid == FUEL_RAIL_PRESSURE)
     {
-        PidVector[FUEL_RAIL_PRESSURE] = ((A * 256) + B) * 0.079;
+        PidVector[FUEL_RAIL_PRESSURE] = (double) ((A * 256) + B) * 0.079;
         notPid = false;
     }
     else if (pid == FUEL_RAIL_PRESSURE_DIRECT_INJECT)
     {
         PidVector[FUEL_RAIL_PRESSURE_DIRECT_INJECT] = ((A * 256) + B) * 10;
+        notPid = false;
+    }
+    else if (pid == O2_S1_LAMBDA_RATIO_AND_VOLTAGE)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S1_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((C * 256) + D) * 8) / 65535;
+        }
+        else
+        {
+            PidVector[O2_S1_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S2_LAMBDA_RATIO_AND_VOLTAGE)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S2_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((C * 256) + D) * 8) / 65535;
+        }
+        else
+        {
+            PidVector[O2_S2_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S3_LAMBDA_RATIO_AND_VOLTAGE)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S3_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((C * 256) + D) * 8) / 65535;
+        }
+        else
+        {
+            PidVector[O2_S3_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S4_LAMBDA_RATIO_AND_VOLTAGE)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S4_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((C * 256) + D) * 8) / 65535;
+        }
+        else
+        {
+            PidVector[O2_S4_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S5_LAMBDA_RATIO_AND_VOLTAGE)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S5_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((C * 256) + D) * 8) / 65535;
+        }
+        else
+        {
+            PidVector[O2_S5_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S6_LAMBDA_RATIO_AND_VOLTAGE)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S6_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((C * 256) + D) * 8) / 65535;
+        }
+        else
+        {
+            PidVector[O2_S6_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S7_LAMBDA_RATIO_AND_VOLTAGE)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S7_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((C * 256) + D) * 8) / 65535;
+        }
+        else
+        {
+            PidVector[O2_S7_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S8_LAMBDA_RATIO_AND_VOLTAGE)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S8_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((C * 256) + D) * 8) / 65535;
+        }
+        else
+        {
+            PidVector[O2_S8_LAMBDA_RATIO_AND_VOLTAGE] = (double) (((A * 256) + B) * 2) / 65535;
+        }
         notPid = false;
     }
     else if (pid == COMMANDED_EGR)
@@ -349,6 +498,102 @@ void obd::parseOBD_Vector(QByteArray obd)
         PidVector[BAROMETRIC_PRESSURE] = A;
         notPid = false;
     }
+    else if (pid == O2_S1_LAMBDA_RATIO_AND_CURRENT)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S1_LAMBDA_RATIO_AND_CURRENT] = (double) ((C * 256) + D) / 256 - 128;
+        }
+        else
+        {
+            PidVector[O2_S1_LAMBDA_RATIO_AND_CURRENT] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S2_LAMBDA_RATIO_AND_CURRENT)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S2_LAMBDA_RATIO_AND_CURRENT] = (double) ((C * 256) + D) / 256 - 128;
+        }
+        else
+        {
+            PidVector[O2_S2_LAMBDA_RATIO_AND_CURRENT] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S3_LAMBDA_RATIO_AND_CURRENT)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S3_LAMBDA_RATIO_AND_CURRENT] = (double) ((C * 256) + D) / 256 - 128;
+        }
+        else
+        {
+            PidVector[O2_S3_LAMBDA_RATIO_AND_CURRENT] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S4_LAMBDA_RATIO_AND_CURRENT)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S4_LAMBDA_RATIO_AND_CURRENT] = (double) ((C * 256) + D) / 256 - 128;
+        }
+        else
+        {
+            PidVector[O2_S4_LAMBDA_RATIO_AND_CURRENT] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S5_LAMBDA_RATIO_AND_CURRENT)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S5_LAMBDA_RATIO_AND_CURRENT] = (double) ((C * 256) + D) / 256 - 128;
+        }
+        else
+        {
+            PidVector[O2_S5_LAMBDA_RATIO_AND_CURRENT] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S6_LAMBDA_RATIO_AND_CURRENT)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S6_LAMBDA_RATIO_AND_CURRENT] = (double) ((C * 256) + D) / 256 - 128;
+        }
+        else
+        {
+            PidVector[O2_S6_LAMBDA_RATIO_AND_CURRENT] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S7_LAMBDA_RATIO_AND_CURRENT)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S7_LAMBDA_RATIO_AND_CURRENT] = (double) ((C * 256) + D) / 256 - 128;
+        }
+        else
+        {
+            PidVector[O2_S7_LAMBDA_RATIO_AND_CURRENT] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
+    else if (pid == O2_S8_LAMBDA_RATIO_AND_CURRENT)
+    {
+        if (Pid_O2_voltage)
+        {
+            PidVector[O2_S8_LAMBDA_RATIO_AND_CURRENT] = (double) ((C * 256) + D) / 256 - 128;
+        }
+        else
+        {
+            PidVector[O2_S8_LAMBDA_RATIO_AND_CURRENT] = (double) (((A * 256) + B) * 2) / 65535;
+        }
+        notPid = false;
+    }
     else if (pid == CATALYST_TEMP_BANK1_SENSOR1)
     {
         PidVector[CATALYST_TEMP_BANK1_SENSOR1] = (((A * 256) + B) / 10) - 40;
@@ -371,17 +616,17 @@ void obd::parseOBD_Vector(QByteArray obd)
     }
     else if (pid == CONTROL_MODULE_VOLTAGE)
     {
-        PidVector[CONTROL_MODULE_VOLTAGE] = ((A * 256) + B) / 1000;
+        PidVector[CONTROL_MODULE_VOLTAGE] = (double) ((A * 256) + B) / 1000;
         notPid = false;
     }
     else if (pid == ABSOLUTE_LOAD_VALUE)
     {
-        PidVector[ABSOLUTE_LOAD_VALUE] = (((A * 256) + B) * 100) / 255;
+        PidVector[ABSOLUTE_LOAD_VALUE] = (double) (((A * 256) + B) * 100) / 255;
         notPid = false;
     }
     else if (pid == FUEL_AIR_COMMANDED_RATIO)
     {
-        PidVector[FUEL_AIR_COMMANDED_RATIO] = ((A * 256) + B) / 32768;
+        PidVector[FUEL_AIR_COMMANDED_RATIO] = (double) ((A * 256) + B) / 32768;
         notPid = false;
     }
     else if (pid == RELATIVE_THROTTLE_POSSITION)
@@ -441,7 +686,7 @@ void obd::parseOBD_Vector(QByteArray obd)
     }
     else if (pid == ETHANOL_FUEL_PERCENT)
     {
-        PidVector[ETHANOL_FUEL_PERCENT] = (A * 100) / 255;
+        PidVector[ETHANOL_FUEL_PERCENT] = (double) (A * 100) / 255;
         notPid = false;
     }
     else if (pid == ABS_EVAP_SYSTEM_VAPOR_PRESSURE)
@@ -466,7 +711,7 @@ void obd::parseOBD_Vector(QByteArray obd)
     }
     else if (pid == HYBRID_BATTERY_PACK_REMAINING)
     {
-        PidVector[HYBRID_BATTERY_PACK_REMAINING] = (A * 100) / 255;
+        PidVector[HYBRID_BATTERY_PACK_REMAINING] = (double) (A * 100) / 255;
         notPid = false;
     }
     else if (pid == ENGINE_OIL_TEMP)
@@ -476,12 +721,12 @@ void obd::parseOBD_Vector(QByteArray obd)
     }
     else if (pid == FUEL_INJECTION_TIMMING)
     {
-        PidVector[FUEL_INJECTION_TIMMING] = (((A * 256) + B) - 26.880) / 128;
+        PidVector[FUEL_INJECTION_TIMMING] = (double) (((A * 256) + B) - 26.880) / 128;
         notPid = false;
     }
     else if (pid == ENGINE_FUEL_RATE)
     {
-        PidVector[ENGINE_FUEL_RATE] = ((A * 256) + B) * 0.05;
+        PidVector[ENGINE_FUEL_RATE] = (double) ((A * 256) + B) * 0.05;
         notPid = false;
     }
     else if (pid == DRIVERS_DEMAND_PERCENT_TORQUE)
@@ -512,7 +757,7 @@ void obd::parseOBD_Vector(QByteArray obd)
         text << timeStamp.toString("hh:mm:ss.zzz;");
         for (int i = 1; i < PidVector.size(); i++)
         {
-            if ((i != 0x20) && (i != 0x40) && (i != 0x60) && (i != 0x80) && (i != 0xA0) && (i != 0xC0) && (i != 0xE0))
+            if (ISNT_AV_PID_COMMAND(pid) && ISNT_USELESS_PID(pid))
             {
                 text << QString::number(PidVector.at(i)) << ";";
             }
@@ -521,6 +766,7 @@ void obd::parseOBD_Vector(QByteArray obd)
         count = 0;
     }
 }
+
 void obd::readData()
 {
     /* Esta es la funcion a usar para recibir las tramas UART

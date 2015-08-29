@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>OBD Reader</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="OBDReader_GUI.qrc">
+    <normaloff>:/images/mil.png</normaloff>:/images/mil.png</iconset>
+  </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout"/>
   </widget>
@@ -31,6 +35,8 @@
     </property>
     <addaction name="actionConnect"/>
     <addaction name="actionDisconnect"/>
+    <addaction name="actionStartLog"/>
+    <addaction name="actionStopLog"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -39,6 +45,7 @@
      <string>Herramientas</string>
     </property>
     <addaction name="actionConfigure"/>
+    <addaction name="actionSelectPid"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -64,10 +71,15 @@
    <addaction name="actionDisconnect"/>
    <addaction name="actionStartLog"/>
    <addaction name="actionStopLog"/>
+   <addaction name="actionSelectPid"/>
    <addaction name="actionConfigure"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionAbout">
+   <property name="icon">
+    <iconset resource="OBDReader_GUI.qrc">
+     <normaloff>:/images/mil.png</normaloff>:/images/mil.png</iconset>
+   </property>
    <property name="text">
     <string>Sobre OBDReader</string>
    </property>
@@ -150,10 +162,10 @@
      <normaloff>:/images/start-button.png</normaloff>:/images/start-button.png</iconset>
    </property>
    <property name="text">
-    <string>StartLog</string>
+    <string>Empezar el log</string>
    </property>
    <property name="toolTip">
-    <string>Empezar el log</string>
+    <string>Empieza el log</string>
    </property>
    <property name="shortcut">
     <string>E</string>
@@ -165,13 +177,28 @@
      <normaloff>:/images/stop-button-red-md.png</normaloff>:/images/stop-button-red-md.png</iconset>
    </property>
    <property name="text">
-    <string>StopLog</string>
+    <string>Parar log</string>
    </property>
    <property name="toolTip">
-    <string>Parar el log</string>
+    <string>Para el log</string>
    </property>
    <property name="shortcut">
     <string>P</string>
+   </property>
+  </action>
+  <action name="actionSelectPid">
+   <property name="icon">
+    <iconset resource="OBDReader_GUI.qrc">
+     <normaloff>:/images/pid-gauge.png</normaloff>:/images/pid-gauge.png</iconset>
+   </property>
+   <property name="text">
+    <string>Seleccionar PIDs</string>
+   </property>
+   <property name="iconText">
+    <string>Seleccionar PIDs</string>
+   </property>
+   <property name="toolTip">
+    <string>Desplegable con los PIDs para elegir</string>
    </property>
   </action>
  </widget>

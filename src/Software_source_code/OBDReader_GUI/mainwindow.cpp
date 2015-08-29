@@ -8,6 +8,7 @@
 #include "ui_mainwindow.h"
 #include "console.h"
 #include "settingsdialog.h"
+#include "pidselectdialog.h"
 
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
@@ -21,7 +22,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     HSTimer = new QTimer(this);
     LSTimer = new QTimer(this);
-    settings = new SettingsDialog(this); //antes no tenia el this
+    settings = new SettingsDialog(this);
+    pidselection = new PidSelectDialog(this);
     Myobd = new obd(this);
 
     ui->actionConnect->setEnabled(true);
@@ -30,14 +32,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->actionStopLog->setEnabled(false);
     ui->actionQuit->setEnabled(true);
     ui->actionConfigure->setEnabled(true);
-//    ui->actionSendOBD->setEnabled(false);
+    ui->actionSelectPid->setEnabled(false);
     Myobd->stop = false;
     Myobd->firstEntryHS = true;
     Myobd->firstEntryLS = true;
+    Myobd->Pid_O2_voltage = true;
 
     initActionsConnections();
 
-    connect(Myobd->serial, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(handleError(QSerialPort::SerialPortError)));
+    connect(Myobd->serial, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(handleSerialError(QSerialPort::SerialPortError)));
     connect(Myobd,SIGNAL(SendPidsHS()),this,SLOT(SendPidsHS()));
     connect(Myobd,SIGNAL(threadError()),this,SLOT(handleThreadError()));
     connect(HSTimer, SIGNAL(timeout()), this, SLOT(SendPidsHS()));
@@ -54,8 +57,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::startOBDLog()
 {
-    int numPIDs = 0;
-
     console->putData("Iniciando Log... ");
     if(Myobd->initFile())
     {
@@ -71,28 +72,39 @@ void MainWindow::startOBDLog()
             ui->actionStartLog->setEnabled(false);
             ui->actionStopLog->setEnabled(true);
             ui->actionDisconnect->setEnabled(false);
-//            ui->actionSendOBD->setEnabled(true);
+            ui->actionSelectPid->setEnabled(false);
 
-            //iniciar hilo de envio de pids
             Myobd->stop = false;
-            Myobd->avPids = Myobd->avaliablePids();
-            Myobd->file->write(EXCELL_PID_HEADER);
+
+            Myobd->avPids = pidselection->avPids();
+
+            Myobd->Pid_O2_voltage = pidselection->O2SensorsConf();
+
+            fillLogHeaderPIDs();
 
             qDebug() << Myobd->avPids;
 
-            //TODO calcular el tiempo del timer en función de los settings y los avPIDs
-            numPIDs = GetNumOfPIDs();
-            Myobd->numPIDs = numPIDs;
+            Myobd->numPIDs = GetNumOfPIDs();
 
-            qDebug() << "numero: " << numPIDs;
+            qDebug() << "numero: " << Myobd->numPIDs;
 
-            SetTimers(numPIDs);
+            if (Myobd->numPIDs == 0)
+            {
+                stopOBDLog();
+                Myobd->file->remove();
+                QMessageBox::warning(this,"Error","No se ha podido empezar el Log. Por favor, seleccione algún PID");
 
-            console->putData("Loggeando...");
+            }
+            else
+            {
+                SetTimers(Myobd->numPIDs);
+
+                console->putData("Loggeando...");
+            }
         }
        else
        {
-           handleError();
+           handleError(OBDREADER_NOT_RESPONDING1);
        }
     }
     else
@@ -112,9 +124,13 @@ void MainWindow::startConnect()
         ui->actionStartLog->setEnabled(true);
         ui->actionDisconnect->setEnabled(true);
         ui->actionConfigure->setEnabled(false);
+        ui->actionSelectPid->setEnabled(true);
         ui->statusBar->showMessage(tr("Conectado a %1 : %2").arg(p.name).arg(OBDREADER_VERSION));
 
-        console->putData("Ok!\n");
+        if (ChekForAvPids() == EXIT_SUCCESS)
+        {
+            console->putData("Ok!\n");
+        }
     }
     else
     {
@@ -133,6 +149,7 @@ void MainWindow::stopConnect()
     ui->actionDisconnect->setEnabled(false);
     ui->actionConfigure->setEnabled(true);
     ui->actionStartLog->setEnabled(false);
+    ui->actionSelectPid->setEnabled(false);
     ui->statusBar->showMessage(tr("Desconectado"));
     console->putData("Desconectandose... Ok!\n");
 }
@@ -153,6 +170,7 @@ void MainWindow::stopOBDLog()
         ui->actionStartLog->setEnabled(true);
         ui->actionStopLog->setEnabled(false);
         ui->actionDisconnect->setEnabled(true);
+        ui->actionSelectPid->setEnabled(true);
 //        ui->actionSendOBD->setEnabled(false);
         console->putData("\nTerminando Log... Ok!\n");
 //        Myobd->stop = true;
@@ -164,7 +182,7 @@ void MainWindow::about()
     QMessageBox::about(this, tr(OBDREADER_VERSION),
                        tr("Interfaz gráfica para el loggeo de datos del <b>OBD Reader</b>. "
                           "Diseñado y desarrollado por <b>Roberto Rodríguez Soto</b> como proyecto "
-                          "fin de carrera de la <b>Universidad de Vigo</b>. v1.0.0"));
+                          "fin de carrera de la <b>Universidad de Vigo</b>."));
 }
 
 void MainWindow::writeData(const QByteArray &data)
@@ -183,31 +201,42 @@ void MainWindow::readData()
 }
 
 
-void MainWindow::handleError()
+void MainWindow::handleError(int errorCode)
 {
-    QMessageBox::critical(this, tr("Error"), "No se ha podido empezar el log. Revise y/o reinicie el dispositivo.");
+    if (errorCode == OBDREADER_NOT_RESPONDING2)
+    {
+        console->putData("Fail!\n");
+        QMessageBox::critical(this, tr("Error"), "El dispositivo no responde. Revise y/o reinicie el dispositivo");
+    }
+    else if (errorCode == PID_ERROR)
+    {
+        Myobd->queryAndResponse(CMD_STOP,1,1,2);
+        console->putData("Fail!\n");
+        QMessageBox::critical(this, tr("Error"), "El dispositivo parece estar desconectado del puerto OBD. Revise la conexión");
+    }
+    else if (errorCode == OBDREADER_NOT_RESPONDING1)
+    {
+        console->putData("Fail!\n");
+        QMessageBox::critical(this, tr("Error"), "No se ha podido empezar el log. Revise y/o reinicie el dispositivo");
+        HSTimer->stop();
+        while (HSTimer->isActive());
+        //    LSTimer->stop();
+        //    while (LSTimer->isActive());
 
-    HSTimer->stop();
-    while (HSTimer->isActive());
-//    LSTimer->stop();
-//    while (LSTimer->isActive());
+        //solicitud cambio de toggle time status led
+        Myobd->sendCommand(CMD_STATUS_LED,107,1);
 
-    //solicitud cambio de toggle time status led
-    Myobd->sendCommand(CMD_STATUS_LED,107,1);
+        Myobd->file->close();
+        Myobd->file->remove();
 
-    Myobd->file->close();
-    Myobd->file->remove();
-
-    ui->actionStartLog->setEnabled(true);
-    ui->actionStopLog->setEnabled(false);
-    ui->actionDisconnect->setEnabled(true);
-//    ui->actionSendOBD->setEnabled(false);
-    console->putData("\nTerminando Log... Ok!\n");
-
+        ui->actionStartLog->setEnabled(true);
+        ui->actionStopLog->setEnabled(false);
+        ui->actionDisconnect->setEnabled(true);
+    }
     stopConnect();
 }
 
-void MainWindow::handleError(QSerialPort::SerialPortError error)
+void MainWindow::handleSerialError(QSerialPort::SerialPortError error)
 {
     if (error == QSerialPort::ResourceError) {
         QMessageBox::critical(this, tr("Error"), Myobd->serial->errorString());
@@ -234,7 +263,7 @@ void MainWindow::SendPidsHS()
     {
         if (Myobd->avPids.at(i))
         {
-            if ((pid != 0x20) && (pid != 0x40) && (pid != 0x60) && (pid != 0x80) && (pid != 0xA0) && (pid != 0xC0) && (pid != 0xE0))
+            if (ISNT_AV_PID_COMMAND(pid))
             {
                 Myobd->parseOBD_Vector(Myobd->queryAndResponse(CMD_OBD,MODE_01,pid,7));
                 qDebug() << QString::number(pid,16);
@@ -267,14 +296,13 @@ void MainWindow::SendPidsLS()
 
 int MainWindow::GetNumOfPIDs(void)
 {
-    uchar pid = 0x01;
-    int numPids = 0;
+    int numPids = 0, pid = 0x01;
 
     for (int i = 0; i < Myobd->avPids.size(); i++)
     {
         if (Myobd->avPids.at(i))
         {
-            if ((pid != 0x20) && (pid != 0x40) && (pid != 0x60) && (pid != 0x80) && (pid != 0xA0) && (pid != 0xC0) && (pid != 0xE0))
+            if (ISNT_AV_PID_COMMAND(pid))
             {
                 numPids++;
             }
@@ -301,10 +329,92 @@ void MainWindow::SetTimers(int num)
 
 }
 
-void MainWindow::avPidsReceive(QByteArray avPids)
+int MainWindow::ChekForAvPids(void)
 {
-    console->putData(avPids.toHex());
-    console->putData("\n");
+    if (Myobd->queryAndResponse(CMD_START,1,1,2) == "ON")
+     {
+         Myobd->avPids = Myobd->avaliablePids();
+         if (GetNumOfPIDs() != NUM_OF_PIDS - 7) // soluciona error cuando no esta conectado a CAN y si al usb.
+         {
+             pidselection->initPidDialog(Myobd->avPids);
+             pidselection->exec();
+             Myobd->queryAndResponse(CMD_STOP,1,1,2);
+         }
+         else
+         {
+            handleError(PID_ERROR);
+            return EXIT_FAILURE;
+         }
+     }
+    else
+    {
+        handleError(OBDREADER_NOT_RESPONDING2);
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+QString MainWindow::queryConfigFilePidName(int pid)
+{
+    int idx;
+    bool found = false;
+    QString name, SearchedPid, pid_str;
+    QFile PIDsFile("PIDsConf");
+    pid_str = QString::number(pid,16);
+
+    PIDsFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    QTextStream text(&PIDsFile);
+
+    /* Se da formato al PID para coincidir con el del archivo */
+    SearchedPid.prepend("#");
+    if (pid_str.size() < 2) {SearchedPid.append("0");}       // Añade un 0 a los simples
+    SearchedPid.append(pid_str);
+    SearchedPid.replace(1, 1, SearchedPid[1].toUpper()); // Cambia a uppercase
+    SearchedPid.replace(2, 1, SearchedPid[2].toUpper()); // Cambia a uppercase
+
+    while(!text.atEnd())
+    {
+        name = text.readLine();
+        if ((idx = name.indexOf(SearchedPid,0)) != -1)
+        {
+            name = name.remove(idx,6);
+            found = true;
+            break;
+        }
+    }
+
+    if (found == false)
+    {
+        name = SearchedPid.remove(0,1);
+    }
+
+    PIDsFile.close();
+
+    return name;
+}
+
+int MainWindow::fillLogHeaderPIDs()
+{
+    QString name;
+    int pid;
+    QTextStream out(Myobd->file);
+
+    pid = 0x01;
+    out << "Timestamp;";
+
+    for (int i = 0; i < NUM_OF_PIDS; i++)
+    {
+        if (ISNT_AV_PID_COMMAND(pid))
+        {
+            name = queryConfigFilePidName(pid);
+            out << name << ";";
+        }
+        pid += 0x01;
+    }
+
+    out << "\n";
+
+    return 0;
 }
 
 void MainWindow::handleThreadError()
@@ -319,8 +429,7 @@ void MainWindow::initActionsConnections()
     connect(ui->actionStopLog, SIGNAL(triggered()), this, SLOT(stopOBDLog()));
     connect(ui->actionDisconnect, SIGNAL(triggered()), this, SLOT(stopConnect()));
     connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(close()));
-    connect(ui->actionConfigure, SIGNAL(triggered()), settings, SLOT(show()));
+    connect(ui->actionConfigure, SIGNAL(triggered()), settings, SLOT(exec()));
+    connect(ui->actionSelectPid, SIGNAL(triggered()), pidselection, SLOT(exec()));
     connect(ui->actionAbout, SIGNAL(triggered()), this, SLOT(about()));
-//    connect(ui->actionSendOBD, SIGNAL(triggered()), this, SLOT(sendOBD()));
-//    connect(ui->actionLed, SIGNAL(triggered()), this, SLOT(sendToggleLed()));
 }

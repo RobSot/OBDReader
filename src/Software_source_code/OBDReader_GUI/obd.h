@@ -30,6 +30,7 @@ public:
     QFile *file;
     QVector<double> PidVector;
     int numPIDs;
+    bool Pid_O2_voltage;
 
 
 private:

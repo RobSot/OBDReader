@@ -17,6 +17,7 @@ QT_END_NAMESPACE
 
 class Console;
 class SettingsDialog;
+class PidSelectDialog;
 
 class MainWindow : public QMainWindow
 {
@@ -43,11 +44,13 @@ private slots:
     void about();
     void writeData(const QByteArray &data);
     void readData();
-    void handleError(QSerialPort::SerialPortError error);
-    void handleError();
+    void handleSerialError(QSerialPort::SerialPortError error);
+    void handleError(int errorCode);
     void sendOBD();
     void sendToggleLed();
-    void avPidsReceive(QByteArray avPids);
+    QString queryConfigFilePidName(int pid);
+    int fillLogHeaderPIDs();
+    int ChekForAvPids(void);
     void handleThreadError();
     int GetNumOfPIDs(void);
     void SetTimers(int num);
@@ -59,6 +62,7 @@ private:
     Ui::MainWindow *ui;
     Console *console;
     SettingsDialog *settings;
+    PidSelectDialog *pidselection;
     QTimer *HSTimer;
     QTimer *LSTimer;
 };

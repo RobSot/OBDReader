@@ -12,18 +12,23 @@ SOURCES += \
     mainwindow.cpp \
     settingsdialog.cpp \
     console.cpp \
-    obd.cpp
+    obd.cpp \
+    pidselectdialog.cpp
 
 HEADERS += \
     mainwindow.h \
     settingsdialog.h \
     console.h \
     defines.h \
-    obd.h
+    obd.h \
+    pidselectdialog.h
 
 FORMS += \
     mainwindow.ui \
-    settingsdialog.ui
+    settingsdialog.ui \
+    pidselectdialog.ui
 
 RESOURCES += \
     OBDReader_GUI.qrc
+
+RC_FILE = OBDReader.rc
