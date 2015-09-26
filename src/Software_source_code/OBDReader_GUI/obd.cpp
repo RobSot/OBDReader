@@ -757,7 +757,7 @@ void obd::parseOBD_Vector(QByteArray obd)
         text << timeStamp.toString("hh:mm:ss.zzz;");
         for (int i = 1; i < PidVector.size(); i++)
         {
-            if (ISNT_AV_PID_COMMAND(pid) && ISNT_USELESS_PID(pid))
+            if (ISNT_AV_PID_COMMAND(i) && ISNT_USELESS_PID(i))
             {
                 text << QString::number(PidVector.at(i)) << ";";
             }

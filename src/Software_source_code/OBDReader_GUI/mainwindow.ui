@@ -168,7 +168,7 @@
     <string>Empieza el log</string>
    </property>
    <property name="shortcut">
-    <string>E</string>
+    <string>Ctrl+E</string>
    </property>
   </action>
   <action name="actionStopLog">
@@ -183,7 +183,7 @@
     <string>Para el log</string>
    </property>
    <property name="shortcut">
-    <string>P</string>
+    <string>Ctrl+P</string>
    </property>
   </action>
   <action name="actionSelectPid">
@@ -199,6 +199,9 @@
    </property>
    <property name="toolTip">
     <string>Desplegable con los PIDs para elegir</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
  </widget>

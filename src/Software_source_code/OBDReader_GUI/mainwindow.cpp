@@ -57,6 +57,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::startOBDLog()
 {
+    //TODO: Caso de error en el que se desconecte el dispositivo de CAN una vez ya conectado y se intente empezar el log
+
     console->putData("Iniciando Log... ");
     if(Myobd->initFile())
     {
@@ -263,7 +265,7 @@ void MainWindow::SendPidsHS()
     {
         if (Myobd->avPids.at(i))
         {
-            if (ISNT_AV_PID_COMMAND(pid))
+            if (ISNT_AV_PID_COMMAND(pid) && ISNT_USELESS_PID(pid))
             {
                 Myobd->parseOBD_Vector(Myobd->queryAndResponse(CMD_OBD,MODE_01,pid,7));
                 qDebug() << QString::number(pid,16);
@@ -302,7 +304,7 @@ int MainWindow::GetNumOfPIDs(void)
     {
         if (Myobd->avPids.at(i))
         {
-            if (ISNT_AV_PID_COMMAND(pid))
+            if (ISNT_AV_PID_COMMAND(pid) && ISNT_USELESS_PID(pid))
             {
                 numPids++;
             }
@@ -334,7 +336,7 @@ int MainWindow::ChekForAvPids(void)
     if (Myobd->queryAndResponse(CMD_START,1,1,2) == "ON")
      {
          Myobd->avPids = Myobd->avaliablePids();
-         if (GetNumOfPIDs() != NUM_OF_PIDS - 7) // soluciona error cuando no esta conectado a CAN y si al usb.
+         if (GetNumOfPIDs() != NUM_OF_PIDS - 7 - 8) // soluciona error cuando no esta conectado a CAN y si al usb.
          {
              pidselection->initPidDialog(Myobd->avPids);
              pidselection->exec();
@@ -404,7 +406,7 @@ int MainWindow::fillLogHeaderPIDs()
 
     for (int i = 0; i < NUM_OF_PIDS; i++)
     {
-        if (ISNT_AV_PID_COMMAND(pid))
+        if (ISNT_AV_PID_COMMAND(pid) && ISNT_USELESS_PID(pid))
         {
             name = queryConfigFilePidName(pid);
             out << name << ";";

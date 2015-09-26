@@ -237,7 +237,7 @@
                   value="${memories.programmemory.partition2.start.value}"/>
         <property key="memories.programmemory.start" value="0x0"/>
         <property key="poweroptions.powerenable" value="false"/>
-        <property key="programmertogo.imagename" value=""/>
+        <property key="programmertogo.imagename" value="OBDReader_v.1.0"/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>
         <property key="programoptions.pgmspeed" value="2"/>

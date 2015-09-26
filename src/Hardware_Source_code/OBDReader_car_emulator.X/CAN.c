@@ -113,14 +113,17 @@ void OnCanRx(can_t canFrame)
     obd_t obdFrame;
     obdFrame = CAN2OBDFrame(canFrame);
 
+    /***********************/
+    /*** Avaliable PIDs ****/
+    /***********************/
     if (obdFrame.pid == 0x0000)
     {
         obdFrame.mode += 1;
         obdFrame.num = 6;
-        obdFrame.data[0] = 0x08;
-        obdFrame.data[1] = 0x18;
-        obdFrame.data[2] = 0x00;
-        obdFrame.data[3] = 0x01;
+        obdFrame.data[0] = 0x18;    //0001 1000; 0x04,0x05
+        obdFrame.data[1] = 0x19;    //0001 1001; 0x0C,0x0D,0x10
+        obdFrame.data[2] = 0x18;    //0001 1000; 0x14,0x15
+        obdFrame.data[3] = 0x01;    //0000 0001; 0x20
 
         SendOBDFrame(obdFrame);
     }
@@ -129,10 +132,10 @@ void OnCanRx(can_t canFrame)
     {
         obdFrame.mode += 1;
         obdFrame.num = 6;
-        obdFrame.data[0] = 0x00;
-        obdFrame.data[1] = 0x00;
-        obdFrame.data[2] = 0x00;
-        obdFrame.data[3] = 0x01;
+        obdFrame.data[0] = 0x00;    //0000 0000;
+        obdFrame.data[1] = 0x00;    //0000 0000;
+        obdFrame.data[2] = 0x00;    //0000 0000;
+        obdFrame.data[3] = 0x01;    //0000 0001; 0x40
 
         SendOBDFrame(obdFrame);
     }
@@ -141,7 +144,7 @@ void OnCanRx(can_t canFrame)
     {
         obdFrame.mode += 1;
         obdFrame.num = 6;
-        obdFrame.data[0] = 0x04;
+        obdFrame.data[0] = 0x04;    //0000 0100;
         obdFrame.data[1] = 0x00;
         obdFrame.data[2] = 0x00;
         obdFrame.data[3] = 0x00;
@@ -161,7 +164,7 @@ void OnCanRx(can_t canFrame)
         SendOBDFrame(obdFrame);
     }
 
-    else if (obdFrame.pid == 0x0060)
+    else if (obdFrame.pid == 0x0080)
     {
         obdFrame.mode += 1;
         obdFrame.num = 6;
@@ -197,10 +200,27 @@ void OnCanRx(can_t canFrame)
         SendOBDFrame(obdFrame);
     }
 
+    /***********************/
+    /* PIDs Implementation */
+    /***********************/
+    else if (obdFrame.pid == 0x0004)                                            // Calculated Engine Load
+    {
+        static uint8_t load = 0;
+        if (load > 250) {load = 0;}
+
+        obdFrame.mode += 1;
+        obdFrame.num = 3;
+        obdFrame.data[0] = load;
+
+        SendOBDFrame(obdFrame);
+
+        load++;
+    }
+
     else if (obdFrame.pid == 0x0005)                                            // Coolant Temp
     {
         static uint8_t temp = 65;
-        if (temp > 130) {temp = 65;}
+        if (temp > 135) {temp = 125;}
 
         obdFrame.mode += 1;
         obdFrame.num = 3;
@@ -229,7 +249,7 @@ void OnCanRx(can_t canFrame)
     else if (obdFrame.pid == 0x000D)                                            // Vehicle Speed
     {
         static uint8_t speed = 0;
-        if (speed > 255) {speed = 0;}
+        if (speed > 250) {speed = 0;}
 
         obdFrame.mode += 1;
         obdFrame.num = 3;
@@ -239,7 +259,67 @@ void OnCanRx(can_t canFrame)
         
         speed++;
     }
+
+    else if (obdFrame.pid == 0x0010)                                            // MAF
+    {
+        static uint16_t maf = 5000;
+        if (maf > 28000) {maf = 5000;}
+
+        obdFrame.mode += 1;
+        obdFrame.num = 4;
+        obdFrame.data[0] = (uint8_t) (maf >> 8);
+        obdFrame.data[1] = (uint8_t) maf;
+
+        SendOBDFrame(obdFrame);
+
+        maf += 100;
+    }
+
+    else if (obdFrame.pid == 0x0014)                                            // Oxigen sensor 1
+    {
+        static uint8_t voltage = 200;
+        if (voltage > 220) {voltage = 50;}
+
+        obdFrame.mode += 1;
+        obdFrame.num = 3;
+        obdFrame.data[0] = voltage;
+
+        SendOBDFrame(obdFrame);
+
+        voltage += 7;
+    }
+
+    else if (obdFrame.pid == 0x0015)                                            // Oxigen sensor 2
+    {
+        static uint8_t voltage = 100;
+        if (voltage > 240) {voltage = 0;}
+
+        obdFrame.mode += 1;
+        obdFrame.num = 3;
+        obdFrame.data[0] = voltage;
+
+        SendOBDFrame(obdFrame);
+
+        voltage++;
+    }
     
+//    else if (obdFrame.pid == 0x0024)                                            // Lamda 1
+//    {
+//        static uint16_t lamda = 900 * 4;
+//        if (lamda > 5000 * 4) {lamda = 3000 * 4;}
+//
+//        obdFrame.mode += 1;
+//        obdFrame.num = 6;
+//        obdFrame.data[0] = (uint8_t) (lamda >> 8);
+//        obdFrame.data[1] = (uint8_t) lamda;
+//        obdFrame.data[2] = (uint8_t) (lamda >> 8);
+//        obdFrame.data[3] = (uint8_t) lamda;
+//
+//        SendOBDFrame(obdFrame);
+//
+//        lamda = ((lamda/4)+100)*4;
+//    }
+
     else if (obdFrame.pid == 0x0046)                                            // Ambient Temp
     {
         static uint8_t temp = 10;
